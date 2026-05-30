@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AWS Database Services — Cloud Practitioner Study Guide</title>
+<style>
+:root {
+  --rds: #FF9900;
+  --aurora: #527FFF;
+  --dynamo: #3B48DF;
+  --docdb: #3F8624;
+  --elasticache: #D13212;
+  --dax: #7B33CC;
+  --redshift: #E87400;
+  --bg: #0F0F1A;
+  --surface: #1A1A2E;
+  --surface2: #22223A;
+  --text: #E8E8F0;
+  --muted: #9595B0;
+  --accent: #FFB347;
+  --success: #4CAF50;
+  --danger: #EF5350;
+  --border: #2A2A42;
+  --radius: 16px;
+  --radius-sm: 10px;
+  --font: 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+  overflow-x: hidden;
+}
+/* Progress Bar */
+#progress-wrap {
+  position: fixed; top: 0; left: 0; width: 100%; height: 4px;
+  background: var(--border); z-index: 1000;
+}
+#progress-bar {
+  height: 100%; width: 0%;
+  background: linear-gradient(90deg, var(--rds), var(--aurora), var(--dynamo), var(--dax), var(--redshift));
+  transition: width 0.3s;
+}
+/* Nav */
+nav {
+  display: flex; align-items: center; justify-content: center; gap: 12px;
+  padding: 14px 20px; flex-wrap: wrap; position: sticky; top: 0; z-index: 999;
+  background: rgba(15,15,26,0.92); backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+}
+nav a {
+  color: var(--muted); text-decoration: none; font-size: 0.85rem; font-weight: 500;
+  padding: 6px 12px; border-radius: 20px; transition: all 0.2s; white-space: nowrap;
+}
+nav a:hover, nav a:focus { color: #fff; background: var(--surface2); }
+/* Container */
+.container { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
+section { padding: 64px 0; }
+/* Hero */
+.hero {
+  text-align: center; padding: 100px 24px 80px;
+  background: radial-gradient(ellipse at 50% 20%, rgba(255,153,0,0.12) 0%, transparent 60%),
+              radial-gradient(ellipse at 80% 80%, rgba(59,72,223,0.10) 0%, transparent 50%);
+  position: relative; overflow: hidden;
+}
+.hero::before {
+  content: ''; position: absolute; inset: 0;
+  background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,255,255,0.008) 2px, rgba(255,255,255,0.008) 4px);
+  pointer-events: none;
+}
+.hero h1 {
+  font-size: clamp(2rem, 5vw, 3.2rem); font-weight: 800;
+  background: linear-gradient(135deg, var(--rds), var(--aurora), var(--dax));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  margin-bottom: 12px;
+}
+.hero p { font-size: 1.15rem; color: var(--muted); max-width: 600px; margin: 0 auto 32px; }
+.hero-icons { font-size: 2.5rem; display: flex; justify-content: center; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; }
+.hero-icons span { transition: transform 0.3s; cursor: default; }
+.hero-icons span:hover { transform: scale(1.25) rotate(5deg); }
+/* Section Headers */
+h2 {
+  font-size: 1.8rem; font-weight: 700; text-align: center; margin-bottom: 8px;
+  background: linear-gradient(135deg, var(--accent), var(--aurora));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+}
+h3 { font-size: 1.25rem; font-weight: 650; margin-bottom: 12px; }
+.subtitle { text-align: center; color: var(--muted); margin-bottom: 40px; font-size: 0.95rem; }
+/* Decision Tree */
+.tree-container {
+  background: var(--surface); border-radius: var(--radius); padding: 32px;
+  border: 1px solid var(--border);
+}
+.tree-root { text-align: center; margin-bottom: 20px; }
+.tree-root .root-node {
+  display: inline-block; background: var(--surface2); color: var(--accent);
+  padding: 14px 28px; border-radius: 30px; font-weight: 700; font-size: 1rem;
+  border: 2px solid var(--accent); cursor: default;
+}
+.tree-branches { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }
+.tree-branch {
+  background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 14px 18px; cursor: pointer; transition: all 0.2s; flex: 0 1 200px;
+  text-align: center; font-weight: 600; font-size: 0.9rem; min-width: 180px;
+}
+.tree-branch:hover, .tree-branch:focus { transform: translateY(-3px); border-color: var(--accent); box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
+.tree-branch.active { border-color: var(--accent); background: rgba(255,179,71,0.1); }
+.tree-answer {
+  display: none; margin-top: 24px; padding: 24px; background: var(--surface2);
+  border-radius: var(--radius-sm); border-left: 4px solid var(--accent);
+}
+.tree-answer.show { display: block; animation: fadeSlide 0.3s ease; }
+@keyframes fadeSlide { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+/* Cards Grid */
+.card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; }
+.card {
+  background: var(--surface); border-radius: var(--radius); padding: 24px;
+  border: 1px solid var(--border); transition: all 0.25s; position: relative; overflow: hidden;
+}
+.card:hover { transform: translateY(-4px); box-shadow: 0 12px 32px rgba(0,0,0,0.4); }
+.card::before {
+  content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 4px;
+}
+.card.rds::before { background: var(--rds); }
+.card.aurora::before { background: var(--aurora); }
+.card.dynamo::before { background: var(--dynamo); }
+.card.docdb::before { background: var(--docdb); }
+.card.elasticache::before { background: var(--elasticache); }
+.card.dax::before { background: var(--dax); }
+.card.redshift::before { background: var(--redshift); }
+.card .icon { font-size: 2rem; margin-bottom: 8px; }
+.card .name { font-size: 1.1rem; font-weight: 700; margin-bottom: 4px; }
+.card .badge-row { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0; }
+.card .badge {
+  font-size: 0.72rem; padding: 3px 10px; border-radius: 12px; font-weight: 600;
+  background: rgba(255,255,255,0.08); color: var(--muted);
+}
+.card .trigger-words { font-size: 0.8rem; color: var(--accent); font-weight: 600; margin: 8px 0; }
+.card .use-this { font-size: 0.85rem; margin: 6px 0; color: var(--success); }
+.card .dont-confuse { font-size: 0.82rem; margin: 6px 0; color: var(--danger); }
+/* Accordion (OLTP vs OLAP, SQL vs NoSQL) */
+.concept-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
+.concept-card {
+  background: var(--surface); border-radius: var(--radius); padding: 24px;
+  border: 1px solid var(--border);
+}
+.concept-card h3 { color: var(--accent); }
+.concept-table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 0.88rem; }
+.concept-table th, .concept-table td { padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--border); }
+.concept-table th { color: var(--accent); font-weight: 650; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.5px; }
+/* Comparison Table */
+.comp-table-wrap { overflow-x: auto; }
+.comp-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; min-width: 700px; }
+.comp-table th {
+  background: var(--surface2); padding: 14px 12px; text-align: left; font-weight: 700;
+  color: var(--accent); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.5px;
+  position: sticky; top: 0;
+}
+.comp-table td { padding: 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+.comp-table tr:hover td { background: rgba(255,255,255,0.02); }
+.comp-table .cat-chip {
+  display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 0.72rem; font-weight: 700;
+}
+.cat-sql { background: rgba(255,153,0,0.2); color: var(--rds); }
+.cat-nosql { background: rgba(59,72,223,0.2); color: #6B7AFF; }
+.cat-cache { background: rgba(209,50,18,0.2); color: var(--elasticache); }
+.cat-analytics { background: rgba(232,116,0,0.2); color: var(--redshift); }
+/* Memory / Flashcard Section */
+.flashcard-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
+.flashcard {
+  perspective: 600px; height: 180px; cursor: pointer;
+}
+.flashcard-inner {
+  width: 100%; height: 100%; position: relative;
+  transform-style: preserve-3d; transition: transform 0.5s;
+}
+.flashcard.flipped .flashcard-inner { transform: rotateY(180deg); }
+.flashcard-front, .flashcard-back {
+  position: absolute; inset: 0; border-radius: var(--radius-sm);
+  display: flex; align-items: center; justify-content: center; text-align: center;
+  padding: 16px; font-weight: 700; backface-visibility: hidden;
+}
+.flashcard-front {
+  background: var(--surface); border: 1px solid var(--border); font-size: 1rem; color: var(--text);
+}
+.flashcard-back {
+  background: linear-gradient(135deg, var(--surface2), var(--surface));
+  border: 2px solid var(--accent); transform: rotateY(180deg);
+  font-size: 0.9rem; color: var(--accent);
+}
+/* Scenarios */
+.scenario-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+.scenario-card {
+  background: var(--surface); border-radius: var(--radius-sm); padding: 20px;
+  border: 1px solid var(--border); transition: border-color 0.3s;
+}
+.scenario-card p { margin-bottom: 12px; font-size: 0.92rem; }
+.scenario-card select {
+  width: 100%; padding: 10px; border-radius: 8px; background: var(--surface2);
+  color: var(--text); border: 1px solid var(--border); font-size: 0.85rem; font-family: inherit;
+}
+.scenario-card .feedback {
+  margin-top: 10px; font-size: 0.85rem; font-weight: 600; min-height: 20px;
+}
+.scenario-card .feedback.correct { color: var(--success); }
+.scenario-card .feedback.wrong { color: var(--danger); }
+.scenario-card.correct-border { border-color: var(--success); }
+.scenario-card.wrong-border { border-color: var(--danger); }
+/* Quiz */
+.quiz-container { max-width: 700px; margin: 0 auto; }
+.quiz-q {
+  background: var(--surface); border-radius: var(--radius); padding: 24px;
+  border: 1px solid var(--border); margin-bottom: 16px;
+}
+.quiz-q .q-num { color: var(--accent); font-weight: 700; font-size: 0.8rem; text-transform: uppercase; margin-bottom: 6px; }
+.quiz-q .q-text { font-weight: 600; margin-bottom: 14px; }
+.quiz-q label {
+  display: block; padding: 10px 14px; margin: 4px 0; border-radius: 8px;
+  cursor: pointer; transition: background 0.15s; font-size: 0.9rem;
+}
+.quiz-q label:hover { background: var(--surface2); }
+.quiz-q input[type="radio"] { margin-right: 10px; accent-color: var(--accent); }
+.quiz-q .explain { display: none; margin-top: 10px; padding: 12px; background: var(--surface2); border-radius: 8px; font-size: 0.85rem; color: var(--accent); }
+.quiz-q .explain.show { display: block; }
+.btn {
+  display: inline-block; padding: 12px 28px; border-radius: 30px; border: none; cursor: pointer;
+  font-weight: 700; font-size: 0.95rem; font-family: inherit; transition: all 0.2s;
+}
+.btn-primary {
+  background: linear-gradient(135deg, var(--rds), var(--aurora));
+  color: #fff; box-shadow: 0 4px 16px rgba(82,127,255,0.25);
+}
+.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 24px rgba(82,127,255,0.4); }
+.btn-outline { background: transparent; border: 2px solid var(--border); color: var(--text); }
+.btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+.btn-row { display: flex; gap: 12px; justify-content: center; margin-top: 24px; flex-wrap: wrap; }
+.score-display {
+  text-align: center; font-size: 1.6rem; font-weight: 800; padding: 20px;
+  border-radius: var(--radius); background: var(--surface); margin-bottom: 24px; display: none;
+}
+/* Cheat Sheet */
+.cheat-sheet {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px;
+}
+.cheat-item {
+  background: var(--surface); border-radius: var(--radius-sm); padding: 16px 18px;
+  border: 1px solid var(--border); display: flex; align-items: center; gap: 12px;
+  transition: all 0.2s;
+}
+.cheat-item:hover { border-color: var(--accent); transform: translateX(4px); }
+.cheat-item .cs-emoji { font-size: 1.6rem; flex-shrink: 0; }
+.cheat-item .cs-arrow { color: var(--accent); font-weight: 700; flex-shrink: 0; }
+.cheat-item .cs-svc { font-weight: 700; font-size: 0.9rem; }
+/* Footer */
+footer { text-align: center; padding: 40px 0; color: var(--muted); font-size: 0.85rem; border-top: 1px solid var(--border); }
+/* Decorative */
+.highlight { color: var(--accent); font-weight: 700; }
+/* Mobile */
+@media (max-width: 640px) {
+  nav { gap: 6px; padding: 10px; }
+  nav a { font-size: 0.73rem; padding: 5px 10px; }
+  .card-grid, .flashcard-grid { grid-template-columns: 1fr; }
+  .tree-branches { flex-direction: column; }
+  .hero { padding: 60px 16px 50px; }
+  section { padding: 40px 0; }
+  .comp-table { font-size: 0.75rem; }
+}
+</style>
+</head>
+<body>
+
+<div id="progress-wrap"><div id="progress-bar"></div></div>
+
+<nav>
+  <a href="#hero">🏠 Home</a>
+  <a href="#tree">🌳 Decision Tree</a>
+  <a href="#cards">🃏 Service Cards</a>
+  <a href="#concepts">📖 Concepts</a>
+  <a href="#compare">📊 Compare</a>
+  <a href="#memory">🧠 Memory</a>
+  <a href="#scenarios">🎯 Scenarios</a>
+  <a href="#quiz">📝 Quiz</a>
+  <a href="#cheatsheet">📋 Cheat Sheet</a>
+</nav>
+
+<!-- ==================== HERO ==================== -->
+<section class="hero" id="hero">
+  <div class="hero-icons">
+    <span>🗄️</span><span>⚡</span><span>📊</span><span>🔍</span><span>🚀</span><span>🌍</span><span>💾</span>
+  </div>
+  <h1>AWS Database Services Made Simple</h1>
+  <p>Cloud Practitioner study guide: pick the right database service by use case — no deep architecture, just what you need for the exam.</p>
+  <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;font-size:0.82rem;color:var(--muted)">
+    <span>🟠 RDS</span><span>🔵 Aurora</span><span>🟣 DynamoDB</span><span>🟢 DocumentDB</span><span>🔴 ElastiCache</span><span>🟤 DAX</span><span>🟠 Redshift</span>
+  </div>
+</section>
+
+<!-- ==================== DECISION TREE ==================== -->
+<section id="tree"><div class="container">
+  <h2>🌳 The Database Decision Tree</h2>
+  <p class="subtitle">Click any branch to reveal the matching AWS service — like a "choose your own adventure" for databases!</p>
+  <div class="tree-container">
+    <div class="tree-root"><div class="root-node">🤔 What kind of database do I need?</div></div>
+    <div class="tree-branches">
+      <button class="tree-branch" data-svc="rds" style="border-top:3px solid var(--rds)">🗄️ SQL / Relational</button>
+      <button class="tree-branch" data-svc="aurora" style="border-top:3px solid var(--aurora)">⚡ High-Performance MySQL/PostgreSQL</button>
+      <button class="tree-branch" data-svc="dynamo" style="border-top:3px solid var(--dynamo)">🔑 NoSQL / Serverless / Key-Value</button>
+      <button class="tree-branch" data-svc="global" style="border-top:3px solid var(--dynamo)">🌍 Global Low-Latency NoSQL</button>
+      <button class="tree-branch" data-svc="docdb" style="border-top:3px solid var(--docdb)">📄 MongoDB / JSON Documents</button>
+      <button class="tree-branch" data-svc="elasticache" style="border-top:3px solid var(--elasticache)">💨 Cache Layer</button>
+      <button class="tree-branch" data-svc="dax" style="border-top:3px solid var(--dax)">⚡ Cache for DynamoDB</button>
+      <button class="tree-branch" data-svc="redshift" style="border-top:3px solid var(--redshift)">📊 Analytics / Data Warehouse</button>
+    </div>
+    <div class="tree-answer" id="treeAnswer"></div>
+  </div>
+</div></section>
+
+<!-- ==================== SERVICE CARDS ==================== -->
+<section id="cards"><div class="container">
+  <h2>🃏 Service Cards</h2>
+  <p class="subtitle">Each card is a bite-sized study snack. Learn the service, its trigger words, and what NOT to confuse it with.</p>
+  <div class="card-grid" id="cardGrid"></div>
+</div></section>
+
+<!-- ==================== CONCEPTS ==================== -->
+<section id="concepts"><div class="container">
+  <h2>📖 Key Concepts</h2>
+  <p class="subtitle">Three mental models that show up all over the CCP exam.</p>
+  <div class="concept-grid">
+    <!-- OLTP vs OLAP -->
+    <div class="concept-card">
+      <h3>🏪 OLTP vs 📊 OLAP</h3>
+      <table class="concept-table">
+        <tr><th>OLTP</th><th>OLAP</th></tr>
+        <tr><td>Online <b>Transaction</b> Processing</td><td>Online <b>Analytical</b> Processing</td></tr>
+        <tr><td>Day-to-day app operations</td><td>Reporting &amp; business intelligence</td></tr>
+        <tr><td>Placing orders, logging in</td><td>Sales trends from years of data</td></tr>
+        <tr><td><b>→ RDS, Aurora, DynamoDB</b></td><td><b>→ Redshift</b></td></tr>
+        <tr><td>Many small, fast transactions</td><td>Few large, complex queries</td></tr>
+      </table>
+    </div>
+    <!-- SQL vs NoSQL -->
+    <div class="concept-card">
+      <h3>🗄️ SQL vs 🔑 NoSQL</h3>
+      <table class="concept-table">
+        <tr><th>SQL</th><th>NoSQL</th></tr>
+        <tr><td>Structured tables &amp; rows</td><td>Flexible schema</td></tr>
+        <tr><td>Fixed schema, relationships</td><td>Key-value, document, graph</td></tr>
+        <tr><td>ACID transactions</td><td>Massive horizontal scale</td></tr>
+        <tr><td><b>→ RDS, Aurora</b></td><td><b>→ DynamoDB, DocumentDB</b></td></tr>
+        <tr><td>MySQL, PostgreSQL, SQL Server</td><td>JSON, key-value, MongoDB-like</td></tr>
+      </table>
+    </div>
+    <!-- Managed vs EC2 -->
+    <div class="concept-card">
+      <h3>☁️ Managed DB vs 🖥️ DB on EC2</h3>
+      <table class="concept-table">
+        <tr><th>Managed (RDS, DynamoDB…)</th><th>Self-managed on EC2</th></tr>
+        <tr><td>AWS handles patching, backups, HA</td><td>You install &amp; maintain everything</td></tr>
+        <tr><td>Automatic failover &amp; scaling</td><td>You configure failover manually</td></tr>
+        <tr><td>Pay for the service</td><td>Pay for EC2 + your time</td></tr>
+        <tr><td>✅ <b>CCP answer: prefer managed</b></td><td>Only if you need full control</td></tr>
+      </table>
+    </div>
+  </div>
+</div></section>
+
+<!-- ==================== COMPARISON TABLE ==================== -->
+<section id="compare"><div class="container">
+  <h2>📊 Master Comparison Table</h2>
+  <p class="subtitle">Your one-stop reference for every database service at the Cloud Practitioner level.</p>
+  <div class="comp-table-wrap">
+    <table class="comp-table" id="compTable"></table>
+  </div>
+</div></section>
+
+<!-- ==================== MEMORY / FLASHCARDS ==================== -->
+<section id="memory"><div class="container">
+  <h2>🧠 Memory Tricks</h2>
+  <p class="subtitle">Click any card to flip it. These mnemonics will save you on exam day!</p>
+  <div class="flashcard-grid" id="flashcardGrid"></div>
+</div></section>
+
+<!-- ==================== SCENARIO PRACTICE ==================== -->
+<section id="scenarios"><div class="container">
+  <h2>🎯 Scenario Practice</h2>
+  <p class="subtitle">10 mini-scenarios. Pick the right AWS service and get instant feedback.</p>
+  <div class="scenario-grid" id="scenarioGrid"></div>
+  <div style="text-align:center;margin-top:16px;font-size:0.9rem;color:var(--muted)">
+    Score: <span id="scenarioScore" style="color:var(--accent);font-weight:700;">0</span> / 10
+  </div>
+</div></section>
+
+<!-- ==================== QUIZ ==================== -->
+<section id="quiz"><div class="container">
+  <h2>📝 Final Quiz — 20 Questions</h2>
+  <p class="subtitle">CCP-style questions. Pick one answer per question, then submit to see your score.</p>
+  <div class="quiz-container" id="quizContainer"></div>
+  <div class="score-display" id="quizScore"></div>
+  <div class="btn-row">
+    <button class="btn btn-primary" id="quizSubmit">Submit Quiz</button>
+    <button class="btn btn-outline" id="quizRetry" style="display:none">🔄 Retry Quiz</button>
+  </div>
+</div></section>
+
+<!-- ==================== CHEAT SHEET ==================== -->
+<section id="cheatsheet"><div class="container">
+  <h2>📋 Final Cheat Sheet</h2>
+  <p class="subtitle">Print this in your brain. If you know this table, you know databases for the CCP.</p>
+  <div class="cheat-sheet" id="cheatSheet"></div>
+</div></section>
+
+<footer>
+  <p>AWS Cloud Practitioner CLF-C02 · Database Services Study Guide · Built for learning, not boredom ✨</p>
+</footer>
+
+<script>
+// ===== DATA =====
+const services = {
+  rds: {
+    name: 'Amazon RDS', icon: '🗄️', cls: 'rds',
+    explain: 'Managed relational database service supporting MySQL, PostgreSQL, MariaDB, Oracle, and SQL Server. AWS handles patching, backups, and replication so you don\'t have to.',
+    example: 'An e-commerce app storing customer orders and product catalog in MySQL.',
+    triggers: '"Managed relational database", "MySQL/PostgreSQL", "structured data", "OLTP"',
+    useThis: 'You need a managed SQL database for a normal application (orders, users, inventory).',
+    noConfuse: 'Do not confuse with <b>DynamoDB</b> (NoSQL) or <b>Redshift</b> (analytics/data warehouse). RDS is for OLTP, not OLAP.'
+  },
+  rr: {
+    name: 'RDS Read Replicas', icon: '📖', cls: 'rds',
+    explain: 'Read-only copies of your RDS database used to offload read traffic. The primary DB handles writes; replicas handle reads.',
+    example: 'A news site where 90% of traffic is readers viewing articles — send reads to replicas.',
+    triggers: '"Read scaling", "read-heavy workload", "Replica Reads", "offload read traffic"',
+    useThis: 'Your app has too many read requests and you need to scale reads horizontally.',
+    noConfuse: 'Do not confuse with <b>Multi-AZ</b> (high availability/failover, not scaling). Read Replicas = performance. Multi-AZ = durability.'
+  },
+  maz: {
+    name: 'RDS Multi-AZ', icon: '🛡️', cls: 'rds',
+    explain: 'A standby database instance in a different Availability Zone that automatically takes over if the primary fails. Synchronous replication.',
+    example: 'A banking app that cannot afford any downtime if a data center goes offline.',
+    triggers: '"High availability", "failover", "disaster recovery", "AZ Availability", "standby"',
+    useThis: 'You need automatic failover and high availability — the database must survive an AZ outage.',
+    noConfuse: 'Do not confuse with <b>Read Replicas</b> (read scaling). Multi-AZ = standby for failover, not for reading.'
+  },
+  aurora: {
+    name: 'Amazon Aurora', icon: '⚡', cls: 'aurora',
+    explain: 'AWS-optimized, high-performance relational database compatible with MySQL and PostgreSQL. 5× faster than standard MySQL, 3× faster than standard PostgreSQL.',
+    example: 'A high-traffic SaaS platform that needs MySQL compatibility but better speed and durability.',
+    triggers: '"High-performance MySQL/PostgreSQL", "5× faster", "Aurora Serverless", "global database"',
+    useThis: 'You need MySQL or PostgreSQL with enterprise-grade performance, automatic scaling, and high durability.',
+    noConfuse: 'Do not confuse with <b>standard RDS</b>. Aurora is the premium, AWS-engineered version. If the question says "high-performance MySQL/PostgreSQL," pick Aurora.'
+  },
+  dynamo: {
+    name: 'Amazon DynamoDB', icon: '🔑', cls: 'dynamo',
+    explain: 'Fully serverless NoSQL key-value and document database. Single-digit millisecond latency at any scale. No servers to manage.',
+    example: 'A gaming leaderboard that needs ultra-fast reads and writes for millions of players.',
+    triggers: '"Serverless NoSQL", "key-value", "low latency", "scalable", "IoT/gaming/mobile"',
+    useThis: 'You need a fast, scalable NoSQL database with no server management — perfect for gaming, mobile, IoT, and shopping carts.',
+    noConfuse: 'Do not confuse with <b>RDS</b> (SQL/relational) or <b>DocumentDB</b> (MongoDB-compatible documents). DynamoDB = serverless key-value NoSQL.'
+  },
+  global: {
+    name: 'DynamoDB Global Tables', icon: '🌍', cls: 'dynamo',
+    explain: 'Multi-Region, active-active DynamoDB tables. Reads and writes are replicated across chosen AWS Regions automatically.',
+    example: 'A social media app with users in North America, Europe, and Asia — all need fast reads/writes locally.',
+    triggers: '"Multi-Region", "active-active", "global low-latency", "disaster recovery global"',
+    useThis: 'Your global application needs low-latency NoSQL reads and writes in multiple AWS Regions.',
+    noConfuse: 'Do not confuse with <b>standard DynamoDB</b> (single region). Global Tables = multi-region active-active. Also not the same as RDS cross-region read replicas.'
+  },
+  dax: {
+    name: 'DynamoDB Accelerator (DAX)', icon: '⚡', cls: 'dax',
+    explain: 'An in-memory cache specifically for DynamoDB. Reduces read latency from milliseconds to microseconds for repeated reads.',
+    example: 'A product catalog that gets queried thousands of times per second — DAX caches popular items.',
+    triggers: '"DynamoDB cache", "microsecond latency", "DAX cluster", "accelerate DynamoDB reads"',
+    useThis: 'Your DynamoDB app has repeated reads for the same data and you need even faster response times.',
+    noConfuse: 'Do not confuse with <b>ElastiCache</b> (general-purpose cache). DAX is ONLY for DynamoDB. If the question mentions DynamoDB + caching, pick DAX.'
+  },
+  elasticache: {
+    name: 'Amazon ElastiCache', icon: '💨', cls: 'elasticache',
+    explain: 'Managed in-memory cache service using Redis or Memcached. Reduces database load by caching frequently accessed data.',
+    example: 'A weather app caching the latest forecast so it doesn\'t query the database for every user request.',
+    triggers: '"Cache", "in-memory", "Redis/Memcached", "reduce database load", "sub-millisecond"',
+    useThis: 'Your app repeatedly queries the same data — use ElastiCache to reduce database load and speed up response times.',
+    noConfuse: 'Do not confuse with <b>DAX</b> (DynamoDB-only cache). ElastiCache = general-purpose cache for any database type.'
+  },
+  docdb: {
+    name: 'Amazon DocumentDB', icon: '📄', cls: 'docdb',
+    explain: 'Managed document database compatible with MongoDB. Stores and queries JSON-like documents.',
+    example: 'A content management system storing blog posts with flexible metadata as JSON documents.',
+    triggers: '"MongoDB-compatible", "JSON documents", "document database", "flexible schema"',
+    useThis: 'You need MongoDB-compatible JSON document storage without managing MongoDB yourself.',
+    noConfuse: 'Do not confuse with <b>DynamoDB</b> (key-value NoSQL, not MongoDB-compatible). DocumentDB = documents/MongoDB. DynamoDB = key-value/serverless.'
+  },
+  redshift: {
+    name: 'Amazon Redshift', icon: '📊', cls: 'redshift',
+    explain: 'Petabyte-scale data warehouse for analytics, business intelligence, and reporting. Columnar storage optimized for complex queries across large datasets.',
+    example: 'A retail chain analyzing 5 years of sales data to find seasonal trends for dashboards.',
+    triggers: '"Data warehouse", "analytics", "BI/dashboards", "columnar", "OLAP", "petabyte-scale"',
+    useThis: 'You need to run complex analytical queries across massive datasets for reports and dashboards.',
+    noConfuse: 'Do not confuse with <b>RDS</b> (OLTP/transactions). Redshift = OLAP/analytics. If the question says "data warehouse" or "analytics," pick Redshift.'
+  }
+};
+
+const treeAnswers = {
+  rds:   { title:'🗄️ Amazon RDS', text:'Managed relational database for SQL workloads. Use when the question says <b>"managed MySQL/PostgreSQL"</b> or <b>"structured data"</b>. Remember: RDS = <b>Regular Database Service</b> for OLTP apps.' },
+  aurora:{ title:'⚡ Amazon Aurora', text:'AWS-engineered, high-performance MySQL/PostgreSQL. Use when the question says <b>"high-performance MySQL/PostgreSQL"</b> or <b>"5× faster"</b>. Aurora = <b>Advanced RDS</b>.' },
+  dynamo:{ title:'🔑 Amazon DynamoDB', text:'Serverless NoSQL, key-value. Use when the question says <b>"serverless NoSQL"</b>, <b>"key-value"</b>, or <b>"low-latency at scale"</b>. DynamoDB = <b>Doesn\'t need servers</b>.' },
+  global:{ title:'🌍 DynamoDB Global Tables', text:'Multi-Region active-active DynamoDB. Use when the question mentions <b>"global low-latency"</b> and <b>"multiple Regions"</b> with NoSQL. Global Tables = <b>DynamoDB goes global</b>.' },
+  docdb:{ title:'📄 Amazon DocumentDB', text:'MongoDB-compatible JSON document store. Use when the question says <b>"MongoDB"</b> or <b>"JSON documents"</b>. DocumentDB = <b>Documents / MongoDB</b>.' },
+  elasticache:{ title:'💨 Amazon ElastiCache', text:'In-memory cache (Redis/Memcached). Use when the question says <b>"cache"</b>, <b>"reduce database load"</b>, or <b>"Redis/Memcached"</b>. ElastiCache = <b>Extra fast cache</b>.' },
+  dax:{ title:'⚡ DynamoDB Accelerator (DAX)', text:'In-memory cache specifically for DynamoDB. Use when the question mentions <b>"DynamoDB" + "faster reads"</b>. DAX = <b>DynamoDB Accelerator</b> — only for DynamoDB.' },
+  redshift:{ title:'📊 Amazon Redshift', text:'Petabyte-scale data warehouse for analytics. Use when the question says <b>"data warehouse"</b>, <b>"analytics"</b>, or <b>"dashboards"</b>. Redshift = <b>Reports</b>.' },
+};
+
+// ===== DECISION TREE =====
+document.querySelectorAll('.tree-branch').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tree-branch').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const ans = treeAnswers[btn.dataset.svc];
+    const div = document.getElementById('treeAnswer');
+    div.innerHTML = `<strong style="font-size:1.1rem;">${ans.title}</strong><p style="margin-top:8px;">${ans.text}</p>`;
+    div.classList.add('show');
+    markProgress('tree');
+  });
+});
+
+// ===== SERVICE CARDS =====
+const cardGrid = document.getElementById('cardGrid');
+Object.entries(services).forEach(([key, s]) => {
+  const div = document.createElement('div');
+  div.className = `card ${s.cls}`;
+  div.innerHTML = `
+    <div class="icon">${s.icon}</div>
+    <div class="name">${s.name}</div>
+    <div class="badge-row"><span class="badge">${s.cls === 'rds' ? 'SQL' : s.cls === 'dynamo' ? 'NoSQL' : s.cls === 'docdb' ? 'Document' : s.cls === 'elasticache' ? 'Cache' : s.cls === 'dax' ? 'Cache' : s.cls === 'redshift' ? 'Analytics' : 'SQL'}</span></div>
+    <p style="font-size:0.85rem;color:var(--muted);margin:8px 0;">${s.explain}</p>
+    <p style="font-size:0.82rem;"><b>Real-world:</b> ${s.example}</p>
+    <p class="trigger-words">🔍 Exam triggers: ${s.triggers}</p>
+    <p class="use-this">✅ ${s.useThis}</p>
+    <p class="dont-confuse">⚠️ ${s.noConfuse}</p>
+  `;
+  cardGrid.appendChild(div);
+  div.addEventListener('click', () => markProgress('cards'));
+});
+
+// ===== COMPARISON TABLE =====
+const compData = [
+  ['Amazon RDS','SQL / Relational','OLTP apps, structured data','"Managed relational", "MySQL/PostgreSQL"','DynamoDB (NoSQL), Redshift (analytics)'],
+  ['RDS Read Replicas','Read Scaling','Read-heavy workloads','"Read Replicas", "read scaling"','Multi-AZ (failover, not scaling)'],
+  ['RDS Multi-AZ','High Availability','Automatic failover','"Multi-AZ", "failover", "standby"','Read Replicas (scaling, not HA)'],
+  ['Amazon Aurora','SQL / High-Perf','High-perf MySQL/PostgreSQL','"5× faster", "Aurora Serverless"','Standard RDS (premium vs standard)'],
+  ['Amazon DynamoDB','NoSQL / Key-Value','Gaming, mobile, IoT, serverless','"Serverless NoSQL", "key-value"','RDS (SQL), DocumentDB (MongoDB)'],
+  ['DynamoDB Global Tables','NoSQL / Multi-Region','Global low-latency apps','"Global Tables", "multi-Region"','Standard DynamoDB (single region)'],
+  ['DAX','NoSQL Cache','DynamoDB read acceleration','"DAX", "DynamoDB cache"','ElastiCache (general-purpose cache)'],
+  ['Amazon ElastiCache','Cache','Reduce DB load, speed reads','"Redis/Memcached", "in-memory"','DAX (DynamoDB-only cache)'],
+  ['Amazon DocumentDB','Document NoSQL','MongoDB-compatible JSON docs','"MongoDB", "JSON documents"','DynamoDB (key-value NoSQL)'],
+  ['Amazon Redshift','Data Warehouse','Analytics, BI, dashboards','"Data warehouse", "OLAP", "analytics"','RDS (OLTP, not analytics)'],
+];
+const compTable = document.getElementById('compTable');
+compTable.innerHTML = `<thead><tr><th>Service</th><th>Category</th><th>Best For</th><th>Exam Keywords</th><th>Avoid Confusing With</th></tr></thead><tbody>${
+  compData.map(r => {
+    let catChip = '';
+    const cat = r[1].toLowerCase();
+    if (cat.includes('sql') || cat.includes('relational')) catChip = 'cat-sql';
+    else if (cat.includes('nosql') || cat.includes('document')) catChip = 'cat-nosql';
+    else if (cat.includes('cache')) catChip = 'cat-cache';
+    else if (cat.includes('warehouse')) catChip = 'cat-analytics';
+    return `<tr><td><b>${r[0]}</b></td><td><span class="cat-chip ${catChip}">${r[1]}</span></td><td>${r[2]}</td><td>${r[3]}</td><td>${r[4]}</td></tr>`;
+  }).join('')
+}</tbody>`;
+
+// ===== FLASHCARDS =====
+const flashcards = [
+  ['🗄️ RDS', 'Regular Database Service'],
+  ['⚡ Aurora', 'Advanced RDS'],
+  ['🔑 DynamoDB', 'Doesn\'t need servers'],
+  ['📄 DocumentDB', 'Documents / MongoDB'],
+  ['💨 ElastiCache', 'Extra fast cache'],
+  ['⚡ DAX', 'DynamoDB Accelerator'],
+  ['📊 Redshift', 'Reports'],
+  ['📖 Read Replica', 'Replica Reads'],
+  ['🛡️ Multi-AZ', 'AZ Availability'],
+];
+const fgrid = document.getElementById('flashcardGrid');
+flashcards.forEach(([front, back]) => {
+  const div = document.createElement('div');
+  div.className = 'flashcard';
+  div.innerHTML = `<div class="flashcard-inner"><div class="flashcard-front">${front}</div><div class="flashcard-back">${back}</div></div>`;
+  div.addEventListener('click', () => { div.classList.toggle('flipped'); markProgress('memory'); });
+  fgrid.appendChild(div);
+});
+
+// ===== SCENARIOS =====
+const scenarios = [
+  { q:'A company needs a <b>managed MySQL database</b> for their new web application.', a:'rds', opts:['Amazon RDS','Amazon DynamoDB','Amazon Redshift','Amazon DocumentDB'] },
+  { q:'An app has <b>too many read requests</b> hitting its primary database, slowing down writes.', a:'rr', opts:['RDS Read Replicas','RDS Multi-AZ','Amazon ElastiCache','Amazon DynamoDB'] },
+  { q:'A database <b>must survive an Availability Zone failure</b> with automatic failover.', a:'maz', opts:['RDS Multi-AZ','RDS Read Replicas','DynamoDB Global Tables','AWS Database Migration Service'] },
+  { q:'A company needs a <b>serverless NoSQL database</b> for a mobile gaming leaderboard.', a:'dynamo', opts:['Amazon DynamoDB','Amazon RDS','Amazon Aurora','Amazon Redshift'] },
+  { q:'A global app needs <b>low-latency NoSQL reads and writes in multiple Regions</b>.', a:'global', opts:['DynamoDB Global Tables','RDS Read Replicas','Amazon ElastiCache','Amazon CloudFront'] },
+  { q:'A company needs <b>MongoDB-compatible JSON document storage</b>.', a:'docdb', opts:['Amazon DocumentDB','Amazon DynamoDB','Amazon RDS','Amazon Neptune'] },
+  { q:'A company wants <b>dashboards from years of sales data</b>.', a:'redshift', opts:['Amazon Redshift','Amazon RDS','Amazon DynamoDB','Amazon QuickSight'] },
+  { q:'An app <b>repeatedly requests the same data</b> and needs a caching layer.', a:'elasticache', opts:['Amazon ElastiCache','DAX','Amazon S3','Amazon RDS'] },
+  { q:'A <b>DynamoDB app needs faster repeated reads</b> in microseconds.', a:'dax', opts:['DAX','Amazon ElastiCache','RDS Read Replicas','Amazon CloudFront'] },
+  { q:'A company wants <b>high-performance MySQL/PostgreSQL-compatible</b> database.', a:'aurora', opts:['Amazon Aurora','Amazon RDS','Amazon DynamoDB','Amazon Redshift'] },
+];
+const scenarioGrid = document.getElementById('scenarioGrid');
+let scenarioScore = 0;
+const scenarioStates = new Array(scenarios.length).fill(false);
+scenarios.forEach((sc, i) => {
+  const div = document.createElement('div');
+  div.className = 'scenario-card';
+  div.innerHTML = `
+    <p>🧩 <b>Scenario ${i+1}:</b> ${sc.q}</p>
+    <select data-idx="${i}"><option value="">-- Choose a service --</option>${sc.opts.map(o => `<option value="${o}">${o}</option>`).join('')}</select>
+    <div class="feedback" data-idx="${i}"></div>
+  `;
+  scenarioGrid.appendChild(div);
+});
+scenarioGrid.addEventListener('change', (e) => {
+  if (e.target.tagName !== 'SELECT') return;
+  const idx = parseInt(e.target.dataset.idx);
+  const fb = scenarioGrid.querySelector(`.feedback[data-idx="${idx}"]`);
+  const card = e.target.closest('.scenario-card');
+  const correctAnswers = { rds:'Amazon RDS', rr:'RDS Read Replicas', maz:'RDS Multi-AZ', dynamo:'Amazon DynamoDB', global:'DynamoDB Global Tables', docdb:'Amazon DocumentDB', redshift:'Amazon Redshift', elasticache:'Amazon ElastiCache', dax:'DAX', aurora:'Amazon Aurora' };
+  if (e.target.value === correctAnswers[scenarios[idx].a]) {
+    fb.textContent = '✅ Correct! Great choice.';
+    fb.className = 'feedback correct';
+    card.classList.add('correct-border');
+    card.classList.remove('wrong-border');
+    if (!scenarioStates[idx]) { scenarioStates[idx] = true; scenarioScore++; }
+  } else {
+    fb.textContent = `❌ Not quite. The right answer is "${correctAnswers[scenarios[idx].a]}".`;
+    fb.className = 'feedback wrong';
+    card.classList.add('wrong-border');
+    card.classList.remove('correct-border');
+    if (scenarioStates[idx]) { scenarioStates[idx] = false; scenarioScore--; }
+  }
+  document.getElementById('scenarioScore').textContent = scenarioScore;
+  e.target.style.pointerEvents = 'none';
+  setTimeout(() => { e.target.style.pointerEvents = 'auto'; }, 1000);
+  markProgress('scenarios');
+});
+
+// ===== QUIZ =====
+const quizQuestions = [
+  { q:'A company needs a managed relational database for their e-commerce platform. Which AWS service should they choose?', opts:['Amazon DynamoDB','Amazon RDS','Amazon Redshift','Amazon ElastiCache'], a:1, exp:'RDS is the managed relational database service for OLTP workloads like e-commerce.' },
+  { q:'Which AWS service provides a high-performance, AWS-optimized MySQL and PostgreSQL-compatible database?', opts:['Amazon RDS','Amazon DynamoDB','Amazon Aurora','Amazon Redshift'], a:2, exp:'Aurora is the AWS-optimized, high-performance relational database compatible with MySQL and PostgreSQL.' },
+  { q:'A mobile gaming company needs a serverless, low-latency NoSQL database. Which service fits best?', opts:['Amazon RDS','Amazon DynamoDB','Amazon Redshift','Amazon DocumentDB'], a:1, exp:'DynamoDB is the serverless NoSQL database, perfect for gaming, mobile, and IoT.' },
+  { q:'A team needs MongoDB-compatible JSON document storage in AWS. Which service should they use?', opts:['Amazon DynamoDB','Amazon RDS','Amazon DocumentDB','Amazon Aurora'], a:2, exp:'DocumentDB is the MongoDB-compatible document database for JSON-like data.' },
+  { q:'A company wants to run complex analytical queries on years of sales data for dashboards. Which service?', opts:['Amazon RDS','Amazon DynamoDB','Amazon Redshift','Amazon ElastiCache'], a:2, exp:'Redshift is the data warehouse for OLAP — analytics, reporting, and dashboards.' },
+  { q:'An application needs to cache frequently accessed data to reduce database load. Which service?', opts:['Amazon ElastiCache','DAX','Amazon S3','AWS Lambda'], a:0, exp:'ElastiCache provides managed Redis/Memcached caching to reduce database load.' },
+  { q:'A DynamoDB application needs microsecond read latency for repeatedly accessed items. Which service?', opts:['Amazon ElastiCache','Amazon CloudFront','DAX','AWS Global Accelerator'], a:2, exp:'DAX (DynamoDB Accelerator) is an in-memory cache specifically for DynamoDB.' },
+  { q:'What is the primary purpose of RDS Read Replicas?', opts:['High availability and failover','Scaling read-heavy database workloads','Disaster recovery across Regions','Encrypting data at rest'], a:1, exp:'Read Replicas are for scaling read traffic — offloading reads from the primary database.' },
+  { q:'What is the primary purpose of RDS Multi-AZ?', opts:['Scaling read performance','Reducing storage costs','High availability and automatic failover','Migrating databases to AWS'], a:2, exp:'Multi-AZ provides high availability with a standby instance in another AZ for automatic failover.' },
+  { q:'What are DynamoDB Global Tables used for?', opts:['Caching DynamoDB reads','Encrypting DynamoDB data','Multi-Region active-active replication','Backing up DynamoDB to S3'], a:2, exp:'Global Tables enable multi-Region, active-active DynamoDB for global low-latency applications.' },
+  { q:'Which statement best describes the difference between SQL and NoSQL databases?', opts:['SQL is faster than NoSQL in all cases','SQL uses structured tables/relationships; NoSQL is flexible schema (key-value, document)','NoSQL can only store JSON data','SQL databases cannot run on AWS'], a:1, exp:'SQL = structured tables and relationships (RDS, Aurora). NoSQL = flexible schema, key-value/document (DynamoDB, DocumentDB).' },
+  { q:'What is OLTP best described as?', opts:['Complex analytical queries across large datasets','Day-to-day transaction processing like placing orders','Long-term data archiving','Database backup and restore operations'], a:1, exp:'OLTP (Online Transaction Processing) = everyday app transactions (orders, logins). OLAP = analytics/reporting.' },
+  { q:'What is a key benefit of AWS managed database services over running a database on EC2?', opts:['Managed databases always cost less','AWS handles patching, backups, and high availability','Managed databases have unlimited storage','EC2 databases cannot connect to the internet'], a:1, exp:'Managed services handle patching, backups, replication, and HA — reducing operational overhead.' },
+  { q:'Which AWS service is described as a "data warehouse"?', opts:['Amazon RDS','Amazon DynamoDB','Amazon Redshift','Amazon Aurora'], a:2, exp:'Redshift is the petabyte-scale data warehouse for analytics. "Data warehouse" = Redshift on the exam.' },
+  { q:'A company wants a database compatible with MongoDB. Which AWS service should they choose?', opts:['Amazon DynamoDB','Amazon DocumentDB','Amazon RDS','Amazon Neptune'], a:1, exp:'DocumentDB is MongoDB-compatible. "MongoDB" in the question = DocumentDB in the answer.' },
+  { q:'Which AWS service is a fully serverless NoSQL database?', opts:['Amazon RDS','Amazon Aurora','Amazon DynamoDB','Amazon Redshift'], a:2, exp:'DynamoDB is the fully serverless NoSQL service. No servers to provision or manage.' },
+  { q:'Which AWS service supports Redis and Memcached caching engines?', opts:['DAX','Amazon ElastiCache','Amazon CloudFront','AWS Global Accelerator'], a:1, exp:'ElastiCache supports both Redis and Memcached as managed in-memory cache engines.' },
+  { q:'Which AWS service provides high-performance MySQL and PostgreSQL compatibility?', opts:['Amazon RDS','Amazon DynamoDB','Amazon Aurora','Amazon Redshift'], a:2, exp:'Aurora = high-performance MySQL/PostgreSQL. Think "Aurora = Advanced RDS" for the exam.' },
+  { q:'An application needs to scale read traffic AND survive an AZ failure. Which combination?', opts:['Read Replicas only','Multi-AZ only','Read Replicas for scaling + Multi-AZ for failover','DynamoDB Global Tables'], a:2, exp:'Use both: Read Replicas for read scaling (performance) and Multi-AZ for high availability (failover). Different purposes.' },
+  { q:'A startup wants to store user profiles with a flexible schema that can change frequently. They want no server management. Which service?', opts:['Amazon RDS','Amazon DynamoDB','Amazon Redshift','Amazon EC2 with MongoDB'], a:1, exp:'DynamoDB = serverless + flexible NoSQL schema + no server management. Perfect for evolving user profiles.' },
+];
+
+const quizContainer = document.getElementById('quizContainer');
+quizQuestions.forEach((q, i) => {
+  const div = document.createElement('div');
+  div.className = 'quiz-q';
+  div.innerHTML = `
+    <div class="q-num">Question ${i+1} of 20</div>
+    <div class="q-text">${q.q}</div>
+    ${q.opts.map((o, j) => `<label><input type="radio" name="q${i}" value="${j}"> ${o}</label>`).join('')}
+    <div class="explain" id="exp${i}">💡 ${q.exp}</div>
+  `;
+  quizContainer.appendChild(div);
+});
+
+document.getElementById('quizSubmit').addEventListener('click', () => {
+  let correct = 0;
+  quizQuestions.forEach((q, i) => {
+    const selected = document.querySelector(`input[name="q${i}"]:checked`);
+    const expDiv = document.getElementById(`exp${i}`);
+    expDiv.classList.add('show');
+    if (selected && parseInt(selected.value) === q.a) {
+      correct++;
+      selected.parentElement.style.color = 'var(--success)';
+      selected.parentElement.style.fontWeight = '700';
+    }
+    // Highlight correct answer
+    const labels = document.querySelectorAll(`input[name="q${i}"]`);
+    labels[q.a].parentElement.style.background = 'rgba(76,175,80,0.08)';
+    labels[q.a].parentElement.style.borderRadius = '8px';
+  });
+  const pct = Math.round((correct / 20) * 100);
+  const scoreDiv = document.getElementById('quizScore');
+  scoreDiv.style.display = 'block';
+  const emoji = pct >= 90 ? '🏆' : pct >= 75 ? '🎉' : pct >= 60 ? '👍' : '📚';
+  scoreDiv.innerHTML = `${emoji} You scored <span style="color:var(--accent)">${correct}/20</span> (${pct}%)`;
+  document.getElementById('quizRetry').style.display = 'inline-block';
+  document.getElementById('quizSubmit').style.display = 'none';
+  markProgress('quiz');
+  window.scrollTo({ top: scoreDiv.offsetTop - 100, behavior: 'smooth' });
+});
+
+document.getElementById('quizRetry').addEventListener('click', () => {
+  quizQuestions.forEach((q, i) => {
+    document.getElementById(`exp${i}`).classList.remove('show');
+    const labels = document.querySelectorAll(`input[name="q${i}"]`);
+    labels.forEach(l => {
+      l.checked = false;
+      l.parentElement.style.background = '';
+      l.parentElement.style.color = '';
+      l.parentElement.style.fontWeight = '';
+    });
+  });
+  document.getElementById('quizScore').style.display = 'none';
+  document.getElementById('quizRetry').style.display = 'none';
+  document.getElementById('quizSubmit').style.display = 'inline-block';
+  window.scrollTo({ top: document.getElementById('quiz').offsetTop - 80, behavior: 'smooth' });
+});
+
+// ===== CHEAT SHEET =====
+const cheatData = [
+  ['🗄️','SQL / relational','Amazon RDS'],
+  ['⚡','High-performance MySQL/PostgreSQL','Amazon Aurora'],
+  ['🔑','NoSQL / serverless / key-value','Amazon DynamoDB'],
+  ['📄','MongoDB / JSON documents','Amazon DocumentDB'],
+  ['💨','Cache (general-purpose)','Amazon ElastiCache'],
+  ['⚡','Cache for DynamoDB','DAX'],
+  ['📊','Analytics / data warehouse / dashboards','Amazon Redshift'],
+  ['📖','Read scaling','RDS Read Replicas'],
+  ['🛡️','High availability / failover','RDS Multi-AZ'],
+  ['🌍','Global NoSQL multi-Region','DynamoDB Global Tables'],
+];
+document.getElementById('cheatSheet').innerHTML = cheatData.map(([emoji, desc, svc]) => `
+  <div class="cheat-item"><span class="cs-emoji">${emoji}</span><span style="flex:1;font-size:0.88rem;">${desc}</span><span class="cs-arrow">→</span><span class="cs-svc">${svc}</span></div>
+`).join('');
+
+// ===== PROGRESS TRACKER =====
+const progressSections = {};
+function markProgress(section) {
+  progressSections[section] = true;
+  const total = ['tree','cards','concepts','compare','memory','scenarios','quiz'];
+  const done = total.filter(s => progressSections[s]).length;
+  const pct = Math.round((done / total.length) * 100);
+  document.getElementById('progress-bar').style.width = pct + '%';
+}
+// Observe sections for scroll-based progress
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting && entry.target.id) {
+      markProgress(entry.target.id);
+    }
+  });
+}, { threshold: 0.3 });
+document.querySelectorAll('section[id]').forEach(s => observer.observe(s));
+</script>
+
+</body>
+</html>
